@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#06182d">
-  <title>Sesc Rio Preto | Comedoria — Painel de Pedidos com Voz — Campo Discreto</title>
+  <title>Sesc Rio Preto | Comedoria — Painel de Pedidos com Voz — Controles Discretos</title>
   <style>
     :root{color-scheme:dark;--bg:#07172b;--card:#0e2742;--edge:rgba(170,214,255,.14);--muted:#a7bed3;--white:#f6fbff;--cyan:#5de4f5;--gold:#ffd479}
     *{box-sizing:border-box}
@@ -19,6 +19,15 @@
     .brand-title{font-size:clamp(20px,2.05vw,34px);font-weight:800;letter-spacing:-.04em;line-height:1.12}
     .brand-subtitle{font-size:clamp(10px,.83vw,14px);letter-spacing:.17em;text-transform:uppercase;color:#a7c8dc;margin-top:7px;font-weight:700}
     .header-right{display:flex;gap:20px;align-items:center;flex-shrink:0}
+    /* Controles de manutenção discretos, ao lado do relógio. */
+    .admin-actions{display:flex;align-items:center;gap:7px}
+    .admin-btn{appearance:none;width:32px;height:32px;display:grid;place-items:center;border:1px solid rgba(188,218,237,.12);border-radius:10px;background:rgba(8,25,43,.22);color:#7896ab;cursor:pointer;transition:color .15s,background .15s,border-color .15s;padding:0}
+    .admin-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .admin-btn:hover,.admin-btn:focus-visible{color:#c9dfed;background:#1c3c58;border-color:#638daa;outline:none}
+    .admin-btn[aria-pressed="true"]{color:#e0ad70;background:rgba(122,69,31,.16);border-color:rgba(224,173,112,.30)}
+    .admin-btn.danger:hover,.admin-btn.danger:focus-visible{color:#ffc2c2;border-color:#ad7070;background:rgba(135,43,43,.17)}
+    @media(max-width:560px){.header-right{gap:8px}.admin-btn{width:29px;height:29px}.brand-subtitle{display:none}}
+
     .live{display:flex;align-items:center;gap:9px;text-transform:uppercase;color:#c9dfeb;font-size:clamp(11px,.95vw,15px);font-weight:750;letter-spacing:.12em}
     .live:before{content:"";width:9px;height:9px;border-radius:50%;background:#5beab9;box-shadow:0 0 0 5px #5beab922}
     #clock{font-weight:800;font-size:clamp(19px,1.85vw,31px);font-variant-numeric:tabular-nums;letter-spacing:.02em}
@@ -71,7 +80,19 @@
         </div>
         <div><div class="brand-title">Rio Preto <span style="color:#77d8ed">|</span> Comedoria</div><div class="brand-subtitle">Sesc · Painel de retirada de pedidos</div></div>
       </div>
-      <div class="header-right"><div class="live">Atendimento</div><time id="clock" aria-label="Horário atual">--:--</time></div>
+      <div class="header-right">
+        <div class="live">Atendimento</div>
+        <div class="admin-actions" role="group" aria-label="Controles do atendente">
+          <button type="button" class="admin-btn" id="toggleVoice" aria-label="Desativar voz das senhas" title="Desativar voz (bip permanece)" aria-pressed="false">
+            <svg id="voiceOnIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            <svg id="voiceOffIcon" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 5 6m0-6-5 6"/></svg>
+          </button>
+          <button type="button" class="admin-btn danger" id="clearHistory" aria-label="Zerar todas as senhas" title="Zerar histórico e senha exibida">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
+          </button>
+        </div>
+        <time id="clock" aria-label="Horário atual">--:--</time>
+      </div>
     </header>
 
     <section class="body-grid" aria-label="Cardápio e senhas">
@@ -104,6 +125,7 @@
       // BACKSPACE apaga o ultimo digito; ESC cancela a digitacao atual.
       // O campo inferior exibe o numero em digitacao; ENTER confirma e chama.
       const STORAGE_KEY = 'sesc-rio-preto-comedoria-tv-v1';
+      const VOICE_STORAGE_KEY = 'sesc-rio-preto-comedoria-voice-enabled-v1';
       const HISTORY_LIMIT = 5;
       const MAX_DIGITS = 3;
       const BUFFER_TIMEOUT_MS = 15000;
@@ -114,6 +136,10 @@
       const sound = document.getElementById('notifyAudio');
       const video = document.getElementById('menuVideo');
       const videoFallback = document.getElementById('videoFallback');
+      const voiceToggle = document.getElementById('toggleVoice');
+      const clearButton = document.getElementById('clearHistory');
+      const voiceOnIcon = document.getElementById('voiceOnIcon');
+      const voiceOffIcon = document.getElementById('voiceOffIcon');
       let pending = '';
       let lastKeyAt = 0;
       let audioContext = null;
@@ -122,6 +148,25 @@
       let callSequence = 0;
       const speech = window.speechSynthesis || null;
       let portugueseVoice = null;
+      let voiceEnabled = true;
+      try { voiceEnabled = localStorage.getItem(VOICE_STORAGE_KEY) !== 'false'; } catch (_) {}
+      function renderVoiceToggle() {
+        voiceToggle.setAttribute('aria-pressed', String(!voiceEnabled));
+        voiceToggle.setAttribute('aria-label', voiceEnabled ? 'Desativar voz das senhas' : 'Ativar voz das senhas');
+        voiceToggle.title = voiceEnabled ? 'Desativar voz (bip permanece)' : 'Ativar voz das senhas';
+        voiceOnIcon.hidden = !voiceEnabled;
+        voiceOffIcon.hidden = voiceEnabled;
+        voiceOnIcon.style.display = voiceEnabled ? '' : 'none';
+        voiceOffIcon.style.display = voiceEnabled ? 'none' : '';
+      }
+      renderVoiceToggle();
+      voiceToggle.addEventListener('click', () => {
+        voiceEnabled = !voiceEnabled;
+        try { localStorage.setItem(VOICE_STORAGE_KEY, String(voiceEnabled)); } catch (_) {}
+        if (!voiceEnabled && speech) speech.cancel();
+        renderVoiceToggle();
+        inputSenha.focus({preventScroll:true});
+      });
 
       function selectPortugueseVoice() {
         if (!speech) return null;
@@ -155,7 +200,7 @@
       }
 
       function speakNumber(code, sequence) {
-        if (!speech || sequence !== callSequence) return;
+        if (!voiceEnabled || !speech || sequence !== callSequence) return;
         try {
           speech.cancel();
           // Sem prefixos: a voz anuncia apenas o numero chamado.
@@ -210,6 +255,28 @@
       }
       renderHistory();
       restoreCurrent();
+
+      clearButton.addEventListener('click', () => {
+        if (!window.confirm('Zerar o histórico das últimas senhas e a senha em destaque?')) {
+          inputSenha.focus({preventScroll:true});
+          return;
+        }
+        ++callSequence; // Invalida qualquer locução ainda aguardando o fim do bip.
+        if (speech) speech.cancel();
+        sound.pause();
+        try { sound.currentTime = 0; } catch (_) {}
+        clearTimeout(animationTimer);
+        panel.classList.remove('ringing');
+        history = [];
+        pending = '';
+        lastKeyAt = 0;
+        updateEntry();
+        current.textContent = '—';
+        current.classList.add('placeholder');
+        renderHistory();
+        try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+        inputSenha.focus({preventScroll:true});
+      });
 
       function synthBeep() {
         try {
