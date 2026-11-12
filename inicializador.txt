@@ -1,0 +1,2 @@
+@off
+start "" "msedge.exe" --kiosk "C:\Caminho\Do\Seu\Arquivo.html" --edge-kiosk-type=fullscreen

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+	<head>
+		<title>Sesc Avenida Paulista</title>
+		<meta charset="UTF-8">
+		<style>
+			{
+			padding: 100%;
+			margin: 100%;
+			}
+			header {
+				font-family: Verdana;
+				background-color: #00569f;
+				border: 1px solid white;
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			body { background-color: #00569f; }
+			main {
+				font-family: Verdana;
+				display: flex;
+				float: left;
+				line-height: 0;
+				align-items: stretch;
+				justify-content: normal;
+				position: relative; /* <-- MODIFICAÇÃO APLICADA */
+			}
+			.banner {
+				width: 51%; height: 50vh; }
+			.banner video {
+				position: flex;
+				top: 0;
+				left: 0;
+				object-fit: cover;
+				width: 135%; }
+			.senha {
+				padding: 10px;
+				background-color: #0086f5;
+				color: white;
+				font-size: 100px;
+				text-align: center;
+				min-width: 392px; line-height: 0;
+			}
+			.ultsenha {
+				padding: 30px;
+				line-height: 0;
+			}
+			#valorDigitado {
+				padding: 50px;
+				background: #0086f5;
+				text-align: center;
+				line-height: 0;
+				animation: animate 1.5s linear infinite;
+			}
+			@keyframes animate {
+				from { color: red; }
+				to { color: yellow; }
+			}
+		</style>
+	
+</head>
+		<header align=center>
+			<h1><img src="white.png" width="8%" height="8%">&nbsp;&nbsp;&nbsp;Avenida Paulista | Comedoria</h1>
+		</header>
+<body>
+		<main>
+			<div class="senha" id="senha1">
+				<p><br>
+				<span style="color:white; text-align:center; font-weight:bold; font-size: 80px">Pedido:<h3 id="valorDigitado"></h3></span>
+				<span style="color:white; font-size: 10px; float:left">Nro.:
+					<input type="text" id="valor" maxlength="3" size="5" style="background-color:#0086f5" onkeypress="capturar()" onkeypress="altera_tamanho()">
+				</span>
+			</div>
+			<div class="banner">
+				<video autoplay muted loop>
+					<source src="cardapio.mp4" type="video/mp4">
+				</video>
+			</div>
+		</main>
+
+		<div class="ultsenha">	
+                <div>
+					<span style="color:#00569f; font-size: 110px">.</span><br>
+                    <span style="color:white; font-family:Verdana; font-size: 50px">Últimas senhas chamadas: </span>
+					<span style="color:#fedc74; font-family:Verdana; font-size: 50px"><p><h4 id="ultimas"></h4></span>
+				</div>
+		</div>
+
+    <form id="drum-machine">
+           <div class="drum-pad" id="Q1" onclick="playSound('Q')" >
+               <audio class="clip" id="Q" autostart = "false" 
+                src="notify.wav"></audio></div>
+                
+	</form>
+      <script>
+		var posicao = 0
+        var stringSenhas = ''
+        var senhas =[]
+		var flag = 0
+
+		function capturar() {
+            stringSenhas = ''															//zera stringSenhas
+			capturando = document.getElementById('valor').value;						//atribui valor digitado para variavel
+			if (capturando !== ''){														//verifica se o valor digitado esta vazio
+			if (event.keyCode !== 13) return; else altera_tamanho();					//verifica se apertou enter
+			document.getElementById('valorDigitado').innerHTML = capturando;			//atribui valor digitado ao chamador
+			document.getElementById('valor').value = ''									//limpa a caixa de digitar senha
+
+			for (j = 0; j<senhas.length; j++){											
+				if (capturando == senhas[j]){											//verifica se a senha já está na lista
+					senhas.splice(index, j)												//remove a senha digitada do array
+				}
+				}
+				
+			senhas.unshift(document.getElementById('valorDigitado').innerHTML)			//adiciona senha digitada no array		
+				
+                for (i = 0; i<senhas.length; i++){										//for
+                    stringSenhas+= '» '+ senhas[i]+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'		//incrementa ultimas senhas
+                }
+				
+                if (senhas.length > 4) {												//verifica se tem mais de 4 senhas
+                    senhas.pop()														//remove a última senha
+                }
+            document.getElementById('ultimas').innerHTML = stringSenhas					//exibe ultimas senhas na tela
+			
+		}}
+		
+		function playSound(sampleName) {
+		var sample = document.getElementById(sampleName);
+		sample.play();
+		}
+		
+		function altera_tamanho(){
+                x=document.getElementById("senha1");
+				y=document.getElementById("valorDigitado");
+                
+                // --- MODIFICAÇÃO APLICADA ---
+                x.style.position = 'absolute'; // Tira o elemento do fluxo
+                x.style.zIndex = '10'; // Garante que ele fique por cima do vídeo
+                // -----------------------------
+
+                x.style.height = 700 + 'px';
+				x.style.width = 2000 + 'px';
+				y.style.fontSize = 200 + 'px';
+				
+				setTimeout(function() {				
+                x.style.height = 496 + 'px';
+				x.style.width = 392 + 'px';
+				y.style.fontSize = 100 + 'px';
+                
+                // --- MODIFICAÇÃO APLICADA ---
+                x.style.position = 'static'; // Devolve o elemento ao fluxo normal
+                x.style.zIndex = 'auto'; // Reseta o z-index
+                // -----------------------------
+				}, 3000);
+            }
+		
+		window.addEventListener('keydown', function (event) {
+			var k=event.keyCode;
+			if(k===13) playSound('Q');
+		})
+
+	  </script>
+</body>
+</html>
